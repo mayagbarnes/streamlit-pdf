@@ -98,22 +98,24 @@ def test_pdf_viewer_alt_sets_accessible_name(page: Page):
     expect(container).to_have_attribute("role", "region")
 
 
+def _click_height_slider(page: Page, width_ratio: float = 0.75) -> None:
+    """Interact with the Height slider using current React Aria Streamlit DOM."""
+    slider = page.get_by_test_id("stSlider").filter(
+        has=page.get_by_test_id("stWidgetLabel").get_by_text("Height", exact=True)
+    )
+    expect(slider).to_be_visible()
+    slider.hover()
+    box = slider.bounding_box()
+    if box:
+        page.mouse.click(
+            box["x"] + box["width"] * width_ratio,
+            box["y"] + box["height"] / 2,
+        )
+
+
 def test_pdf_viewer_height_control(page: Page):
     """Test that the PDF viewer height control works correctly."""
-    slider_container = page.locator('div[data-testid="stSlider"]').filter(
-        has_text="Height"
-    )
-
-    slider = slider_container.locator('[role="slider"]')
-    slider_box = slider.bounding_box()
-
-    # Click at a specific position to change the value
-    if slider_box:
-        # Click at 75% of the slider width to set a new value
-        page.mouse.click(
-            slider_box["x"] + slider_box["width"] * 0.75,
-            slider_box["y"] + slider_box["height"] / 2,
-        )
+    _click_height_slider(page, width_ratio=0.75)
 
     # Wait for the value to update and component to re-render
     page.wait_for_load_state("domcontentloaded")
@@ -278,19 +280,7 @@ def test_pdf_viewer_selectbox_renders_properly(page: Page):
 
     # Now trigger a re-render by changing the height slider
     if not pdf_pages_visible:
-        slider_container = page.locator('div[data-testid="stSlider"]').filter(
-            has_text="Height"
-        )
-        slider = slider_container.locator('[role="slider"]')
-        slider_box = slider.bounding_box()
-
-        if slider_box:
-            # Move slider slightly
-            page.mouse.click(
-                slider_box["x"] + slider_box["width"] * 0.6,
-                slider_box["y"] + slider_box["height"] / 2,
-            )
-
+        _click_height_slider(page, width_ratio=0.6)
         page.wait_for_load_state("domcontentloaded")
 
         # Check again if PDF is now rendered
