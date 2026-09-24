@@ -85,7 +85,7 @@ function PDFViewer({
   alt,
 }: PdfViewerProps): ReactElement {
   const file = mergeFileUrlWithStreamlitUrl(fileUrl)
-  const accessibleName = alt?.trim() ? alt : undefined
+  const accessibleName = alt?.trim() || undefined
 
   const [numPages, setNumPages] = useState<number>(0)
   const [loading, setLoading] = useState<boolean>(true)

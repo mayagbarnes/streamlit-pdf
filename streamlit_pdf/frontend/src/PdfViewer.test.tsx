@@ -137,6 +137,7 @@ describe("PdfViewer", () => {
     const container = await screen.findByTestId("pdf-container")
     expect(container).not.toHaveAttribute("aria-label")
     expect(container).not.toHaveAttribute("role")
+    expect(container).not.toHaveAccessibleName()
   })
 
   it("shows no file message when file is not provided", () => {

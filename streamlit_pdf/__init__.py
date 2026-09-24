@@ -126,9 +126,11 @@ def pdf_viewer(
         "height": height,
     }
     # Streamlit owns normalize_alt logging; strip blanks here so empty alt
-    # never reaches the frontend payload.
-    if alt is not None and alt.strip():
-        data["alt"] = alt
+    # never reaches the frontend payload, and direct callers get a clean name.
+    if alt is not None:
+        trimmed_alt = alt.strip()
+        if trimmed_alt:
+            data["alt"] = trimmed_alt
 
     # Mount the CCv2 component with data payload
     _component_func(
