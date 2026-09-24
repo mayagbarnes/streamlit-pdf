@@ -71,6 +71,32 @@ def test_pdf_viewer_renders(page: Page):
     expect(page.get_by_test_id("pdf-container")).to_be_visible()
 
 
+def test_pdf_viewer_unlabeled_has_no_accessible_name(page: Page):
+    """Omitted alt must not invent an accessible name on the viewer root."""
+    container = page.get_by_test_id("pdf-container")
+    expect(container).to_be_visible()
+    expect(container).not_to_have_attribute("aria-label")
+    expect(container).not_to_have_attribute("role")
+
+
+def test_pdf_viewer_alt_sets_accessible_name(page: Page):
+    """alt must expose a computed accessible name on pdf-container."""
+    checkbox = page.locator('[data-testid="stCheckbox"]').filter(
+        has_text="Include alt text"
+    )
+    checkbox.click()
+    page.wait_for_load_state("domcontentloaded")
+    try:
+        page.wait_for_load_state("networkidle", timeout=10000)
+    except Exception:
+        pass
+
+    container = page.get_by_test_id("pdf-container")
+    expect(container).to_be_visible()
+    expect(container).to_have_accessible_name("Q3 2026 financial report")
+    expect(container).to_have_attribute("role", "region")
+
+
 def test_pdf_viewer_height_control(page: Page):
     """Test that the PDF viewer height control works correctly."""
     # Test height slider - Streamlit sliders need special handling
