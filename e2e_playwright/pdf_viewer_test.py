@@ -75,8 +75,9 @@ def test_pdf_viewer_unlabeled_has_no_accessible_name(page: Page):
     """Omitted alt must not invent an accessible name on the viewer root."""
     container = page.get_by_test_id("pdf-container")
     expect(container).to_be_visible()
-    expect(container).not_to_have_attribute("aria-label")
-    expect(container).not_to_have_attribute("role")
+    # Playwright's not_to_have_attribute requires a value; assert absence directly.
+    assert container.get_attribute("aria-label") is None
+    assert container.get_attribute("role") is None
 
 
 def test_pdf_viewer_alt_sets_accessible_name(page: Page):
@@ -99,16 +100,10 @@ def test_pdf_viewer_alt_sets_accessible_name(page: Page):
 
 def test_pdf_viewer_height_control(page: Page):
     """Test that the PDF viewer height control works correctly."""
-    # Test height slider - Streamlit sliders need special handling
-    # Get the slider container
     slider_container = page.locator('div[data-testid="stSlider"]').filter(
         has_text="Height"
     )
 
-    # Get the current height from the slider's displayed value
-    slider_container.locator('[data-testid="stMarkdownContainer"]').inner_text()
-
-    # Click on the slider to move it
     slider = slider_container.locator('[role="slider"]')
     slider_box = slider.bounding_box()
 
@@ -166,28 +161,33 @@ def test_pdf_viewer_responsive(page: Page):
     expect(page.get_by_test_id("pdf-container")).to_be_visible()
 
 
+def _select_file_type(page: Page, option_name: str) -> None:
+    """Select an option from the file-type selectbox (current Streamlit DOM)."""
+    selectbox = page.locator('[data-testid="stSelectbox"]').filter(
+        has_text="Select file type"
+    )
+    selectbox_input = selectbox.locator("input")
+    selectbox_input.wait_for(state="visible")
+    selectbox_input.click()
+    # ArrowDown opens the dropdown reliably when pointer open is flaky.
+    selectbox_input.press("ArrowDown")
+
+    dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(dropdown).to_be_visible()
+    dropdown.get_by_role("option", name=option_name, exact=True).click()
+
+    page.wait_for_load_state("domcontentloaded")
+    try:
+        page.wait_for_load_state("networkidle", timeout=10000)
+    except Exception:
+        pass
+
+
 def _test_pdf_viewer_with_selectbox(
     page: Page, option_name: str, test_description: str
 ):
     """Helper function to test PDF viewer with selectbox selection."""
-    # Find and click the selectbox
-    selectbox = page.locator('[data-testid="stSelectbox"]').filter(
-        has_text="Select file type"
-    )
-    selectbox.locator('div[data-baseweb="select"] input').click()
-
-    # Click the option in the dropdown
-    page.get_by_role("option", name=option_name, exact=True).click()
-
-    # Wait for DOM to be ready first
-    page.wait_for_load_state("domcontentloaded")
-
-    # Try to wait for network idle, but don't fail if it times out
-    try:
-        page.wait_for_load_state("networkidle", timeout=10000)  # 10 second timeout
-    except Exception:
-        # Continue if networkidle times out - Streamlit components often have ongoing activity
-        pass
+    _select_file_type(page, option_name)
 
     # For Data URI, wait for PDF content to be ready instead of arbitrary timeout
     if option_name == "Data URI":
@@ -256,12 +256,7 @@ def test_pdf_viewer_data_uri_type(page: Page):
 
 def test_pdf_viewer_selectbox_renders_properly(page: Page):
     """Test that PDF viewer renders properly when using selectbox."""
-    # Select a different option
-    selectbox = page.locator('[data-testid="stSelectbox"]').filter(
-        has_text="Select file type"
-    )
-    selectbox.locator('div[data-baseweb="select"] input').click()
-    page.get_by_role("option", name="Path", exact=True).click()
+    _select_file_type(page, "Path")
 
     # Check if container exists
     expect(page.get_by_test_id("pdf-container")).to_be_visible()
